@@ -1,26 +1,38 @@
 name: Setup JGV-ER Repos
 on: 
-  workflow_dispatch: # This adds a "Run workflow" button to your GitHub UI
+  workflow_dispatch:
 
 jobs:
-  create-folders:
+  create-repos:
     runs-on: ubuntu-latest
     steps:
-      - name: Create Repos and Folders
+      - name: Create Structure
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MY_TOKEN: ${{ secrets.MY_GITHUB_PAT }}
+          USER: ${{ github.repository_owner }}
         run: |
           REPOS=("2k23" "2k24" "2k25")
-          SEMS=("1st-Sem" "2nd-Sem" "3rd-Sem" "4th-Sem" "5th-Sem" "6th-Sem" "7th-Sem")
-          MIDS=("Mid-I" "Mid-II" "External-Papers")
-
+          
           for REPO in "${REPOS[@]}"; do
-            # 1. Create the repository via API
-            curl -X POST -H "Authorization: token $GH_TOKEN" \
-                 -d "{\"name\":\"$REPO\", \"auto_init\":true}" \
-                 https://api.github.com/user/repos
+            echo "Creating $REPO..."
             
-            # 2. Add a basic README to establish the structure
-            # (In a real scenario, you'd use a loop to 'touch' files via the Contents API)
-            echo "Repository for $REPO syllabus" > README.md
+            # 1. Create Repository
+            curl -X POST -H "Authorization: token $MY_TOKEN" \
+                 -H "Accept: application/vnd.github.v3+json" \
+                 https://api.github.com/user/repos \
+                 -d "{\"name\":\"$REPO\", \"auto_init\":true}"
+
+            # Wait a few seconds for GitHub to initialize the repo
+            sleep 5
+
+            # 2. Add 1st-Sem subjects as an example 
+            # (You can repeat this logic for all semesters/subjects)
+            SUBJECTS=("Linear Algebra & Calculus" "Chemistry" "Introduction to Programming")
+            
+            for SUB in "${SUBJECTS[@]}"; do
+              curl -X PUT -H "Authorization: token $MY_TOKEN" \
+                   -H "Accept: application/vnd.github.v3+json" \
+                   https://api.github.com/repos/$USER/$REPO/contents/1st-Sem/Mid-I/"$SUB".md \
+                   -d "{\"message\":\"Add $SUB\", \"content\":\"$(echo "Syllabus for $SUB" | base64)\"}"
+            done
           done
